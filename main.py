@@ -72,6 +72,9 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     output = tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, 2,
                                        padding = 'same',
                                        kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
+
+    # Good example how to get sizes, add [1:3] to get y-dim
+    tf.Print(output, [tf.shape(output)])
     return output
 
 tests.test_layers(layers)
@@ -106,14 +109,18 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
-    # TODO: Implement function
-    pass
+    for epoch in epochs:
+        for image, label in get_batches_fn(batch_size):
+            # Training
+            pass
+
 tests.test_train_nn(train_nn)
 
 
 def run():
     num_classes = 2
     image_shape = (160, 576)
+    learning_rate = .01
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
@@ -127,19 +134,19 @@ def run():
 
     with tf.Session() as sess:
         # Path to vgg model
-        vgg_path = os.path.join(data_dir, 'vgg')
+        vgg_path = os.path.join('.', 'vgg')
         # Create function to get batches
         get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
 
         # OPTIONAL: Augment Images for better results
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
-        # TODO: Build NN using load_vgg, layers, and optimize function
+        input_image, keep_prob, layer_3, layer_4, layer_7 = load_vgg(sess, vgg_path)
+        layer_output = layers(layer_3, layer_4, layer_7, num_classes)
+        correct_label = None # TODO: What should this be??
+        logits, train_op, cross_entropy_loss = optimize(layer_output, correct_label, learning_rate, num_classes)
 
-        # TODO: Train NN using the train_nn function
-
-        # TODO: Save inference data using helper.save_inference_samples
-        #  helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
 
