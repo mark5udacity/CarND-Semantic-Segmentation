@@ -54,6 +54,7 @@ def load_vgg(sess, vgg_path):
 tests.test_load_vgg(load_vgg, tf)
 
 
+REGULARIZER_SCALE = 1e-3
 def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     """
     Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
@@ -63,8 +64,16 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
-    # TODO: Implement function
-    return None
+
+    conv_1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1,
+                                padding = 'same',
+                                kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
+
+    output = tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, 2,
+                                       padding = 'same',
+                                       kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
+    return output
+
 tests.test_layers(layers)
 
 
