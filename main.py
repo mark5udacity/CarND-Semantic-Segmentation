@@ -24,16 +24,33 @@ def load_vgg(sess, vgg_path):
     :param vgg_path: Path to vgg folder, containing "variables/" and "saved_model.pb"
     :return: Tuple of Tensors from VGG model (image_input, keep_prob, layer3_out, layer4_out, layer7_out)
     """
-    # TODO: Implement function
-    #   Use tf.saved_model.loader.load to load the model and weights
     vgg_tag = 'vgg16'
     vgg_input_tensor_name = 'image_input:0'
     vgg_keep_prob_tensor_name = 'keep_prob:0'
     vgg_layer3_out_tensor_name = 'layer3_out:0'
     vgg_layer4_out_tensor_name = 'layer4_out:0'
     vgg_layer7_out_tensor_name = 'layer7_out:0'
-    
-    return None, None, None, None, None
+
+    helper.maybe_download_pretrained_vgg(vgg_path)
+
+    if not tf.saved_model.loader.maybe_saved_model_directory(vgg_path):
+        warnings.warn("There doesn't appear to be a saved model found in path: '{}'".format(vgg_path))
+
+    #metaGraphDef = # This is returned by .load, is a protobuf of everything, but need to go through graph to get stuff properly
+    tf.saved_model.loader.load(sess, [vgg_tag], vgg_path)
+    graph = tf.get_default_graph()
+
+    input = graph.get_tensor_by_name(vgg_input_tensor_name)
+    keep = graph.get_tensor_by_name(vgg_keep_prob_tensor_name)
+    layer_3 = graph.get_tensor_by_name(vgg_layer3_out_tensor_name)
+    layer_4 = graph.get_tensor_by_name(vgg_layer4_out_tensor_name)
+    layer_7 = graph.get_tensor_by_name(vgg_layer7_out_tensor_name)
+
+    return input, keep, layer_3, layer_4, layer_7
+
+#with tf.Session() as sess:
+#    load_vgg(sess, os.path.join('.', 'vgg'))
+
 tests.test_load_vgg(load_vgg, tf)
 
 
