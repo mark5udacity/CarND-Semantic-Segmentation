@@ -48,13 +48,11 @@ def load_vgg(sess, vgg_path):
 
     return input, keep, layer_3, layer_4, layer_7
 
-#with tf.Session() as sess:
-#    load_vgg(sess, os.path.join('.', 'vgg'))
-
 tests.test_load_vgg(load_vgg, tf)
 
 
 REGULARIZER_SCALE = 1e-3
+
 def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     """
     Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
@@ -65,17 +63,42 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
 
-    conv_1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1,
+    # Encoder, based on FCN-8
+    conv_1x1_layer_7 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1,
                                 padding = 'same',
                                 kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
 
-    output = tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, 2,
+    # Decoder, based on FCN-8
+    output_decoder = tf.layers.conv2d_transpose(conv_1x1_layer_7, num_classes, 4, (2, 2),
                                        padding = 'same',
                                        kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
 
     # Good example how to get sizes, add [1:3] to get y-dim
-    tf.Print(output, [tf.shape(output)])
-    return output
+    tf.Print(output_decoder, [tf.shape(output_decoder)])
+
+    #"""  I'm not entirely sure on these skip layers, at least make it easy to remove for further debugging if needed
+    # Skip Connections, based on FCN-8
+    conv_1x1_layer_4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1,
+                                padding = 'same',
+                                kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
+
+    skip_1 = tf.add(output_decoder, conv_1x1_layer_4) # TODO: or do we use vgg_layer7 ???
+    skip_1 = tf.layers.conv2d_transpose(skip_1, num_classes, 4, 2,
+                                                padding='same',
+                                                kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
+
+    conv_1x1_layer_3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1,
+                                padding = 'same',
+                                kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
+
+    skip_2 = tf.add(skip_1, conv_1x1_layer_3)
+    skip_2 = tf.layers.conv2d_transpose(skip_2, num_classes, 16, 8,
+                                        padding = 'same',
+                                        kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
+    return skip_2
+    #"""
+
+    return output_decoder
 
 tests.test_layers(layers)
 
