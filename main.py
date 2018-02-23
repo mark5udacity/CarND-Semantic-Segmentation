@@ -138,9 +138,9 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
-    for epoch in epochs:
+    for epoch in range(epochs):
         for image, label in get_batches_fn(batch_size):
-            # Training
+            # Training loss = sess.run( with training optimizer and entropy_loss
             pass
 
 tests.test_train_nn(train_nn)
@@ -154,16 +154,16 @@ def run():
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
 
-    # Download pretrained vgg model
-    helper.maybe_download_pretrained_vgg(data_dir)
+    # Path to vgg model
+    vgg_path = os.path.join('.', 'vgg')
+
+    helper.maybe_download_pretrained_vgg(vgg_path)
 
     # OPTIONAL: Train and Inference on the cityscapes dataset instead of the Kitti dataset.
     # You'll need a GPU with at least 10 teraFLOPS to train on.
     #  https://www.cityscapes-dataset.com/
 
     with tf.Session() as sess:
-        # Path to vgg model
-        vgg_path = os.path.join('.', 'vgg')
         # Create function to get batches
         get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
 
