@@ -77,8 +77,14 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     tf.Print(output_decoder, [tf.shape(output_decoder)])
 
     #"""  I'm not entirely sure on these skip layers, at least make it easy to remove for further debugging if needed
+
+    # Apply scaling, per forum post.
+    # https://discussions.udacity.com/t/here-is-some-advice-and-clarifications-about-the-semantic-segmentation-project/403100
+    pool3_out_scaled = tf.multiply(vgg_layer3_out, 0.0001, name='pool3_out_scaled')
+    pool4_out_scaled = tf.multiply(vgg_layer4_out, 0.01, name='pool4_out_scaled')
+
     # Skip Connections, based on FCN-8
-    conv_1x1_layer_4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1,
+    conv_1x1_layer_4 = tf.layers.conv2d(pool4_out_scaled, num_classes, 1,
                                 padding = 'same',
                                 kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
 
@@ -87,7 +93,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                                                 padding='same',
                                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
 
-    conv_1x1_layer_3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1,
+    conv_1x1_layer_3 = tf.layers.conv2d(pool3_out_scaled, num_classes, 1,
                                 padding = 'same',
                                 kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
 
@@ -102,7 +108,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
 
 tests.test_layers(layers)
 
-
+REGULARIZATION_CONSTANT = 0.01  # Choose an appropriate one.
 def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     """
     Build the TensorFLow loss and optimizer operations.
@@ -111,12 +117,23 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :param learning_rate: TF Placeholder for the learning rate
     :param num_classes: Number of classes to classify
     :return: Tuple of (logits, train_op, cross_entropy_loss)
+
+    For later use in case it's needed:
+    if TensorFlow’s default variable initializer for conv2d and conv2d_transpose layers (which is Glorot uniform)
+     doesn’t work for you, try to change those initializers to truncated normal with a small standard deviation
+      of 0.01 or even 0.001 instead. If you implemented l2-regularization correctly,
+       you might not run into this problem though.
     """
 
-    logits = tf.reshape(nn_last_layer, (-1, num_classes))
+    logits = tf.reshape(nn_last_layer, (-1, num_classes)) # TODO: Perhaps not needed!? But unit tests force due to shape
     #labels = tf.reshape(correct_label, (-1, num_classes)) # Let's see if this is needed?
     cross_entropy_loss = tf.nn.softmax_cross_entropy_with_logits(logits = logits, labels = correct_label)
-    loss_op = tf.reduce_mean(cross_entropy_loss)
+
+    # Add regularization, per forum post leading to https://stackoverflow.com/q/46615623
+    reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    loss = cross_entropy_loss + REGULARIZATION_CONSTANT * sum(reg_losses)
+
+    loss_op = tf.reduce_mean(loss)
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss_op)
     return logits, train_op, cross_entropy_loss
 
@@ -172,7 +189,7 @@ def run():
 
         input_image, keep_prob, layer_3, layer_4, layer_7 = load_vgg(sess, vgg_path)
         layer_output = layers(layer_3, layer_4, layer_7, num_classes)
-        correct_label = None # TODO: What should this be??
+        correct_label = tf.placeholder(tf.float32) # TODO: What should this be??
         logits, train_op, cross_entropy_loss = optimize(layer_output, correct_label, learning_rate, num_classes)
 
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
