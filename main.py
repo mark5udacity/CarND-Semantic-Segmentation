@@ -52,7 +52,7 @@ tests.test_load_vgg(load_vgg, tf)
 
 
 REGULARIZER_SCALE = 1e-3
-
+STDEV_TO_INIT = 1e-2
 def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     """
     Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
@@ -66,11 +66,13 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     # Encoder, based on FCN-8
     conv_1x1_layer_7 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1,
                                 padding = 'same',
+                                kernel_initializer = tf.truncated_normal_initializer(stddev = STDEV_TO_INIT),
                                 kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
 
     # Decoder, based on FCN-8
     output_decoder = tf.layers.conv2d_transpose(conv_1x1_layer_7, num_classes, 4, (2, 2),
                                        padding = 'same',
+                                       kernel_initializer = tf.truncated_normal_initializer(stddev = STDEV_TO_INIT),
                                        kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
 
     # Good example how to get sizes, add [1:3] to get y-dim
@@ -86,20 +88,24 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     # Skip Connections, based on FCN-8
     conv_1x1_layer_4 = tf.layers.conv2d(pool4_out_scaled, num_classes, 1,
                                 padding = 'same',
+                                kernel_initializer = tf.truncated_normal_initializer(stddev = STDEV_TO_INIT),
                                 kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
 
     skip_1 = tf.add(output_decoder, conv_1x1_layer_4) # TODO: or do we use vgg_layer7 ???
     skip_1 = tf.layers.conv2d_transpose(skip_1, num_classes, 4, 2,
-                                                padding='same',
-                                                kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
+                                        padding='same',
+                                        kernel_initializer = tf.truncated_normal_initializer(stddev = STDEV_TO_INIT),
+                                        kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
 
     conv_1x1_layer_3 = tf.layers.conv2d(pool3_out_scaled, num_classes, 1,
                                 padding = 'same',
+                                kernel_initializer = tf.truncated_normal_initializer(stddev = STDEV_TO_INIT),
                                 kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
 
     skip_2 = tf.add(skip_1, conv_1x1_layer_3)
     skip_2 = tf.layers.conv2d_transpose(skip_2, num_classes, 16, 8,
                                         padding = 'same',
+                                        kernel_initializer = tf.truncated_normal_initializer(stddev = STDEV_TO_INIT),
                                         kernel_regularizer = tf.contrib.layers.l2_regularizer(REGULARIZER_SCALE))
     return skip_2
     #"""
@@ -179,7 +185,7 @@ def run():
     num_classes = 2
     image_shape = (160, 576)
 
-    batch_size = 32
+    batch_size = 8
     epochs = 20
 
     data_dir = './data'
