@@ -155,10 +155,22 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
+    sess.run(tf.global_variables_initializer())
+
+    losses = []
+    steps = 0
     for epoch in range(epochs):
         for image, label in get_batches_fn(batch_size):
-            # Training loss = sess.run( with training optimizer and entropy_loss
-            pass
+            steps += 1
+            feed = {
+                correct_label: label,
+                input_image: image,
+                keep_prob: .5,
+                learning_rate: .001
+                }
+            _, loss = sess.run([train_op, cross_entropy_loss], feed_dict = feed)
+            if steps % 5 == 0:
+                print('Epoch:', epoch, 'Steps:', steps, 'Loss:', loss)
 
 tests.test_train_nn(train_nn)
 
@@ -166,7 +178,10 @@ tests.test_train_nn(train_nn)
 def run():
     num_classes = 2
     image_shape = (160, 576)
-    learning_rate = .01
+
+    batch_size = 128
+    epochs = 20
+
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
@@ -190,7 +205,11 @@ def run():
         input_image, keep_prob, layer_3, layer_4, layer_7 = load_vgg(sess, vgg_path)
         layer_output = layers(layer_3, layer_4, layer_7, num_classes)
         correct_label = tf.placeholder(tf.float32) # TODO: What should this be??
+        learning_rate = tf.placeholder(tf.float32)
         logits, train_op, cross_entropy_loss = optimize(layer_output, correct_label, learning_rate, num_classes)
+
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
+                 correct_label, keep_prob, learning_rate)
 
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
