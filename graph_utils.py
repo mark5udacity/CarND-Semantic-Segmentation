@@ -1,6 +1,10 @@
 from glob import glob
-import numpy as np
 from scipy.misc import imread, imresize
+from tensorflow.python.platform import gfile
+from tensorflow.core.protobuf import saved_model_pb2
+from tensorflow.python.util import compat
+
+import numpy as np
 import tensorflow as tf
 
 import argparse
@@ -57,10 +61,24 @@ def benchmark(sess, imgs, runs = 5, binary = True):
     return times
 
 def main(_):
-    imgs = load_imgs()
-    print("XLA {0}".format(FLAGS.use_xla))
-    sess, ops = load_graph(FLAGS.graph)
-    times = benchmark(sess, imgs)
+    #imgs = load_imgs()
+    #print("XLA {0}".format(FLAGS.use_xla))
+    #sess, ops = load_graph(FLAGS.graph)
+    #times = benchmark(sess, imgs)
+
+    with tf.Session() as sess:
+        model_filename = 'vgg/saved_model.pb'
+        with gfile.FastGFile(model_filename, 'rb') as f:
+            data = compat.as_bytes(f.read())
+            sm = saved_model_pb2.SavedModel()
+            sm.ParseFromString(data)
+            g_in = tf.import_graph_def(sm.meta_graphs[0].graph_def)
+
+    LOGDIR = '.'
+    train_writer = tf.summary.FileWriter(LOGDIR)
+    train_writer.add_graph(sess.graph)
+
+    # Use tensorboard --logdir=. to view
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
