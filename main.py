@@ -213,7 +213,7 @@ def run():
 
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
-        # OPTIONAL: Apply the trained model to a video
+        # Apply the trained model to a video, which can be done with video.py
 
 
 if __name__ == '__main__':
