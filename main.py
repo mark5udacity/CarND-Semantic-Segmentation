@@ -179,7 +179,7 @@ def run():
     num_classes = 2
     image_shape = (160, 576)
 
-    batch_size = 128
+    batch_size = 32
     epochs = 20
 
     data_dir = './data'
